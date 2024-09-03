@@ -884,7 +884,7 @@ export const enUS: LocalizationResource = {
       web3WalletButtonsBlockButton: '{{provider|titleize}}',
     },
   },
-  waitlist: {
+  __experimental_waitlist: {
     start: {
       title: 'Join the waitlist',
       subtitle: 'Enter your email address and we’ll let you know when your spot is ready',

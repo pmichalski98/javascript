@@ -787,7 +787,7 @@ type _LocalizationResource = {
     next6Days: LocalizationValue;
     numeric: LocalizationValue;
   };
-  waitlist: {
+  __experimental_waitlist: {
     start: {
       title: LocalizationValue;
       subtitle: LocalizationValue;
