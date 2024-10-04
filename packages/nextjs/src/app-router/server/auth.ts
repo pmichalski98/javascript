@@ -14,10 +14,10 @@ import { buildRequestLike } from './utils';
 
 type Auth = AuthObject & { protect: AuthProtect; redirectToSignIn: RedirectFun<ReturnType<typeof redirect>> };
 
-export const auth = (): Auth => {
+export async function auth(): Promise<Auth> {
   require('server-only');
 
-  const request = buildRequestLike();
+  const request = await buildRequestLike();
   const authObject = createGetAuth({
     debugLoggerName: 'auth()',
     noAuthStatusMessage: authAuthHeaderMissing(),
@@ -49,8 +49,8 @@ export const auth = (): Auth => {
   const protect = createProtect({ request, authObject, redirectToSignIn, notFound, redirect });
 
   return Object.assign(authObject, { protect, redirectToSignIn });
-};
+}
 
-export const initialState = () => {
-  return buildClerkProps(buildRequestLike());
-};
+export async function initialState() {
+  return buildClerkProps(await buildRequestLike());
+}
