@@ -1,18 +1,18 @@
 import type { ProtectProps } from '@clerk/clerk-react';
-import type React from 'react';
+import React from 'react';
 
 import { auth } from './auth';
 
-export async function SignedIn(props: React.PropsWithChildren) {
+export async function SignedIn(props: React.PropsWithChildren): Promise<React.JSX.Element | null> {
   const { children } = props;
   const { userId } = await auth();
-  return userId ? children : null;
+  return userId ? <>{children}</> : null;
 }
 
-export async function SignedOut(props: React.PropsWithChildren) {
+export async function SignedOut(props: React.PropsWithChildren): Promise<React.JSX.Element | null> {
   const { children } = props;
   const { userId } = await auth();
-  return userId ? null : children;
+  return userId ? null : <>{children}</>;
 }
 
 /**
@@ -27,16 +27,16 @@ export async function SignedOut(props: React.PropsWithChildren) {
  * <Protect fallback={<p>Unauthorized</p>} />
  * ```
  */
-export async function Protect(props: ProtectProps) {
+export async function Protect(props: ProtectProps): Promise<React.JSX.Element | null> {
   const { children, fallback, ...restAuthorizedParams } = props;
   const { has, userId } = await auth();
 
   /**
    * Fallback to UI provided by user or `null` if authorization checks failed
    */
-  const unauthorized = fallback ? fallback : null;
+  const unauthorized = fallback ? <>{fallback}</> : null;
 
-  const authorized = children;
+  const authorized = <>{children}</>;
 
   if (!userId) {
     return unauthorized;
