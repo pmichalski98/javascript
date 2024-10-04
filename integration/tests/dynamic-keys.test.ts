@@ -21,7 +21,9 @@ test.describe('dynamic keys @nextjs', () => {
 
         export default clerkMiddleware(async (auth, request) => {
           if (isProtectedRoute(request)) {
-            auth().protect();
+            const resolvedAuth = await auth();
+            console.log('resolvedAuth', resolvedAuth);
+            resolvedAuth().protect();
           }
 
           if (shouldFetchBapi(request)){
@@ -62,7 +64,7 @@ test.describe('dynamic keys @nextjs', () => {
     await app.teardown();
   });
 
-  test('redirects to `signInUrl` on `auth().protect()`', async ({ page, context }) => {
+  test('redirects to `signInUrl` on `await auth().protect()`', async ({ page, context }) => {
     const u = createTestUtils({ app, page, context });
 
     await u.page.goToAppHome();
@@ -74,7 +76,7 @@ test.describe('dynamic keys @nextjs', () => {
     await u.page.waitForURL(/foobar/);
   });
 
-  test('resolves auth signature with `secretKey` on `auth().protect()`', async ({ page, context }) => {
+  test('resolves auth signature with `secretKey` on `await auth().protect()`', async ({ page, context }) => {
     const u = createTestUtils({ app, page, context });
     await u.page.goToRelative('/page-protected');
     await u.page.waitForURL(/foobar/);
