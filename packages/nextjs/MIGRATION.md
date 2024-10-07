@@ -53,8 +53,8 @@ The method now becomes asynchronous. You will need to make the following changes
 
 ```diff
 export default clerkMiddleware(async (auth, request) => {
--   const client = clerkClient();
-+   const client = await clerkClient();
+- const client = clerkClient();
++ const client = await clerkClient();
   const count = await client.users?.getCount();
 
   if (count) {
