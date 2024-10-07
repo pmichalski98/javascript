@@ -7,8 +7,7 @@ import { buildClerkProps } from '../../server/buildClerkProps';
 import { PUBLISHABLE_KEY, SIGN_IN_URL, SIGN_UP_URL } from '../../server/constants';
 import { createGetAuth } from '../../server/createGetAuth';
 import { authAuthHeaderMissing } from '../../server/errors';
-import type { AuthProtect } from '../../server/protect';
-import { createProtect } from '../../server/protect';
+import { type AuthProtect, createProtect } from '../../server/protect';
 import { decryptClerkRequestData, getAuthKeyFromRequest, getHeader } from '../../server/utils';
 import { buildRequestLike } from './utils';
 

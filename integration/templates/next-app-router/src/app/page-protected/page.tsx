@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 
 export default async function Page() {
-  (await auth()).protect();
+  const { protect } = await auth();
+  protect();
   return <div>Protected Page</div>;
 }

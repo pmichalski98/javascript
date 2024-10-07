@@ -46,17 +46,11 @@ export async function Protect(props: ProtectProps): Promise<React.JSX.Element | 
    * Check against the results of `has` called inside the callback
    */
   if (typeof restAuthorizedParams.condition === 'function') {
-    if (restAuthorizedParams.condition(has)) {
-      return authorized;
-    }
-    return unauthorized;
+    return restAuthorizedParams.condition(has) ? authorized : unauthorized;
   }
 
   if (restAuthorizedParams.role || restAuthorizedParams.permission) {
-    if (has(restAuthorizedParams)) {
-      return authorized;
-    }
-    return unauthorized;
+    return has(restAuthorizedParams) ? authorized : unauthorized;
   }
 
   /**

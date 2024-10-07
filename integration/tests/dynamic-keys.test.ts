@@ -13,23 +13,25 @@ test.describe('dynamic keys @nextjs', () => {
       .clone()
       .addFile(
         'src/middleware.ts',
-        () => `import { clerkClient, clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-        import { NextResponse } from 'next/server'
+        () => `import { clerkClient, clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+        import { NextResponse } from 'next/server';
 
         const isProtectedRoute = createRouteMatcher(['/protected']);
         const shouldFetchBapi = createRouteMatcher(['/fetch-bapi-from-middleware']);
 
         export default clerkMiddleware(async (auth, request) => {
           if (isProtectedRoute(request)) {
-            const resolvedAuth = await auth();
-            resolvedAuth.protect();
+            const { protect } = await auth();
+            protect();
           }
 
           if (shouldFetchBapi(request)){
-            const count = await clerkClient().users.getCount();
+            const client = await clerkClient();
+
+            const count = await client.users?.getCount();
 
             if (count){
-              return NextResponse.redirect(new URL('/users-count', request.url))
+              return NextResponse.redirect(new URL('/users-count', request.url));
             }
           }
         }, {
@@ -46,7 +48,7 @@ test.describe('dynamic keys @nextjs', () => {
         () => `import { clerkClient } from '@clerk/nextjs/server'
 
         export default async function Page(){
-          const count = await clerkClient().users.getCount()
+          const count = await clerkClient().users?.getCount() ?? 0;
 
           return <p>Users count: {count}</p>
         }
