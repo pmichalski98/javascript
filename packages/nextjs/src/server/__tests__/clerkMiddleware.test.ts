@@ -650,7 +650,8 @@ describe('Dev Browser JWT when redirecting to cross origin for page requests', f
     });
 
     const resp = await clerkMiddleware(async auth => {
-      await auth().protect();
+      const { protect } = await auth();
+      protect();
     })(req, {} as NextFetchEvent);
 
     expect(resp?.status).toEqual(307);
