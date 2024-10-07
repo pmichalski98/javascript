@@ -1,5 +1,5 @@
 ---
-"@clerk/nextjs": minor
+"@clerk/nextjs": major
 ---
 
-Converting auth() interface to be async
+Converting auth() and clerkClient() interfaces to be async
