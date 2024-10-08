@@ -513,6 +513,12 @@ export const enUS: LocalizationResource = {
       subtitle: 'Access to this app is limited, and an invitation is required to sign up.',
       actionLink: 'Back to sign in',
     },
+    legalConsent: {
+      continue: {
+        subtitle: 'Please read and accept the terms to continue',
+        title: 'Legal consent',
+      },
+    },
   },
   socialButtonsBlockButton: 'Continue with {{provider|titleize}}',
   socialButtonsBlockButtonManyInView: '{{provider|titleize}}',

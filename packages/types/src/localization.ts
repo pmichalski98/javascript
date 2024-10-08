@@ -149,6 +149,12 @@ type _LocalizationResource = {
       subtitle: LocalizationValue;
       actionLink: LocalizationValue;
     };
+    legalConsent: {
+      continue: {
+        title: LocalizationValue;
+        subtitle: LocalizationValue;
+      };
+    };
   };
   signIn: {
     start: {
