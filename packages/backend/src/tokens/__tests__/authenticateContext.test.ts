@@ -1,5 +1,4 @@
-import sinon from 'sinon';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createCookieHeader, createJwt, mockJwtPayload, pkLive, pkTest } from '../../fixtures';
 import runtime from '../../runtime';
@@ -8,8 +7,6 @@ import { createAuthenticateContext } from '../authenticateContext';
 import { createClerkRequest } from '../clerkRequest';
 
 describe('AuthenticateContext', () => {
-  let fakeClock;
-
   const nowTimestampInSec = mockJwtPayload.iat;
 
   const suffixedSession = createJwt({ header: {} });
@@ -20,12 +17,12 @@ describe('AuthenticateContext', () => {
   const suffixedClientUat = '1717490193';
 
   beforeEach(() => {
-    fakeClock = sinon.useFakeTimers(nowTimestampInSec * 1000);
+    vi.useFakeTimers();
+    vi.setSystemTime(nowTimestampInSec * 1000);
   });
 
   afterEach(() => {
-    fakeClock.restore();
-    sinon.restore();
+    vi.useRealTimers();
   });
 
   describe('suffixedCookies', () => {
