@@ -390,7 +390,7 @@ describe('tokens.authenticateRequest(options)', () => {
   // HTTP Authorization exists
   //
 
-  test.only('returns signed out state if jwk fails to load from remote', async () => {
+  test('returns signed out state if jwk fails to load from remote', async () => {
     server.use(
       http.get('https://api.clerk.test/v1/jwks', () => {
         return new HttpResponse('{}', { status: 200 });
