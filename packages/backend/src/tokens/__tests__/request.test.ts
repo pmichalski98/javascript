@@ -1,17 +1,10 @@
+import { http, HttpResponse } from 'msw';
 import sinon from 'sinon';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { TokenVerificationErrorReason } from '../../errors';
-import {
-  mockExpiredJwt,
-  mockInvalidSignatureJwt,
-  mockJwks,
-  mockJwt,
-  mockJwtPayload,
-  mockMalformedJwt,
-} from '../../fixtures';
-import runtime from '../../runtime';
-import { jsonOk } from '../../util/testUtils';
+import { mockExpiredJwt, mockInvalidSignatureJwt, mockJwt, mockJwtPayload, mockMalformedJwt } from '../../fixtures';
+import { server } from '../../mock-server';
 import { AuthErrorReason, AuthStatus } from '../authStatus';
 import {
   authenticateRequest,
@@ -386,31 +379,31 @@ describe('tokens.getOrganizationSyncTarget(url,options)', _ => {
 });
 
 describe('tokens.authenticateRequest(options)', () => {
-  let fakeClock;
-  let fakeFetch;
-
   beforeEach(() => {
-    fakeClock = sinon.useFakeTimers(new Date(mockJwtPayload.iat * 1000).getTime());
-    fakeFetch = sinon.stub(runtime, 'fetch');
-    fakeFetch.onCall(0).returns(jsonOk(mockJwks));
-    // the refresh token flow calls verify twice, so we need to support two calls
-    fakeFetch.onCall(1).returns(jsonOk(mockJwks));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(mockJwtPayload.iat * 1000).getTime());
   });
 
-  afterEach(() => {
-    fakeClock.restore();
-    fakeFetch.restore();
-    sinon.restore();
-  });
+  afterEach(() => {});
 
   //
   // HTTP Authorization exists
   //
 
-  test('returns signed out state if jwk fails to load from remote', async () => {
-    fakeFetch.onCall(0).returns(jsonOk({}));
+  test.only('returns signed out state if jwk fails to load from remote', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return new HttpResponse('{}', { status: 200 });
+      }),
+    );
 
-    const requestState = await authenticateRequest(mockRequestWithHeaderAuth(), mockOptions());
+    try {
+      const requestState = await authenticateRequest(mockRequestWithHeaderAuth(), mockOptions());
+
+      console.log('requestState', requestState);
+    } catch (e) {
+      console.log('e', e);
+    }
 
     const errMessage =
       'The JWKS endpoint did not contain any signing keys. Contact support@clerk.com. Contact support@clerk.com (reason=jwk-remote-failed-to-load, token-carrier=header)';

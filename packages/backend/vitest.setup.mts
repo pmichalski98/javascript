@@ -6,7 +6,8 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 server.events.on('request:start', ({ request }) => {
-  console.log('MSW intercepted:', request.method, request.url);
+  // FOR DEBUGGING
+  // console.log('MSW intercepted:', request.method, request.url);
 });
 
 globalThis.PACKAGE_NAME = '@clerk/backend';

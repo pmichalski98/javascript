@@ -49,8 +49,7 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
 
   it('loads JWKS from Backend API when secretKey is provided', async () => {
     server.use(
-      http.get('https://api.clerk.com/v1/jwks', ({ request }) => {
-        console.log('Outgoing:', request.method, request.url);
+      http.get('https://api.clerk.com/v1/jwks', () => {
         return HttpResponse.json(mockJwks);
       }),
     );
@@ -65,8 +64,7 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
 
   it('loads JWKS from Backend API using the provided apiUrl', async () => {
     server.use(
-      http.get('https://api.clerk.test/v1/jwks', ({ request }) => {
-        console.log('Outgoing:', request.method, request.url);
+      http.get('https://api.clerk.test/v1/jwks', () => {
         return HttpResponse.json(mockJwks);
       }),
     );
@@ -83,8 +81,7 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
 
   it('caches JWK by kid', async () => {
     server.use(
-      http.get('https://api.clerk.com/v1/jwks', ({ request }) => {
-        console.log('Outgoing:', request.method, request.url);
+      http.get('https://api.clerk.com/v1/jwks', () => {
         return HttpResponse.json(mockJwks);
       }),
     );
@@ -110,8 +107,7 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
     // fakeFetch.onCall(4).returns(jsonError('Connection to the origin web server failed', 542));
 
     server.use(
-      http.get('https://api.clerk.com/v1/jwks', ({ request }) => {
-        console.log('Outgoing1:', request.method, request.url);
+      http.get('https://api.clerk.com/v1/jwks', () => {
         return HttpResponse.json({}, { status: 503 });
       }),
     );
@@ -158,8 +154,7 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
 
   it('throws an error when no JWK matches the provided kid', async () => {
     server.use(
-      http.get('https://api.clerk.com/v1/jwks', ({ request }) => {
-        console.log('Outgoing:', request.method, request.url);
+      http.get('https://api.clerk.com/v1/jwks', () => {
         return HttpResponse.json(mockJwks);
       }),
     );
