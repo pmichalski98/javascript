@@ -53,27 +53,6 @@ describe('api.client', () => {
     expect(data[0].id).toBe('user_cafebabe');
     expect(data.length).toBe(1);
     expect(totalCount).toBe(2);
-
-    // expect(
-    //   fakeFetch.calledWith('https://api.clerk.test/v1/users?offset=2&limit=5&user_id=user_cafebabe', {
-    //     method: 'GET',
-    //     headers: {
-    //       Authorization: 'Bearer deadbeef',
-    //       'Content-Type': 'application/json',
-    //       'User-Agent': '@clerk/backend@0.0.0-test',
-    //     },
-    //   }),
-    // ).toBe(true);
-    // expect(
-    //   fakeFetch.calledWith('https://api.clerk.test/v1/users/count?user_id=user_cafebabe', {
-    //     method: 'GET',
-    //     headers: {
-    //       Authorization: 'Bearer deadbeef',
-    //       'Content-Type': 'application/json',
-    //       'User-Agent': '@clerk/backend@0.0.0-test',
-    //     },
-    //   }),
-    // ).toBe(true);
   });
 
   it('executes a successful backend API request for a paginated response', async () => {
