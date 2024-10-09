@@ -44,7 +44,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(false);
         expect(context.sessionTokenInCookie).toBe(session);
-        expect(context.clientUat).toBe(clientUat);
+        expect(context.clientUat.toString()).toBe(clientUat);
       });
 
       it('request with suffixed and valid newer un-suffixed cookies - case of ClerkJS downgrade', async () => {
@@ -65,7 +65,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(false);
         expect(context.sessionTokenInCookie).toBe(newSession);
-        expect(context.clientUat).toBe(clientUat);
+        expect(context.clientUat.toString()).toBe(clientUat);
         expect(context.devBrowserToken).toBe('__clerk_db_jwt');
       });
 
@@ -85,7 +85,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(false);
         expect(context.sessionTokenInCookie).toBe(session);
-        expect(context.clientUat).toBe(clientUat);
+        expect(context.clientUat.toString()).toBe(clientUat);
       });
 
       it('prod: request with suffixed session and signed-out suffixed client_uat', async () => {
@@ -104,7 +104,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(true);
         expect(context.sessionTokenInCookie).toBe(suffixedSession);
-        expect(context.clientUat).toBe('0');
+        expect(context.clientUat.toString()).toBe('0');
       });
     });
 
@@ -124,7 +124,7 @@ describe('AuthenticateContext', () => {
         });
         expect(context.suffixedCookies).toBe(true);
         expect(context.sessionTokenInCookie).toBe(suffixedSession);
-        expect(context.clientUat).toBe(suffixedClientUat);
+        expect(context.clientUat.toString()).toBe(suffixedClientUat);
       });
 
       it('prod: request with invalid issuer un-suffixed and valid suffixed cookies - case of multiple apps on same eTLD+1 domain', async () => {
@@ -142,7 +142,7 @@ describe('AuthenticateContext', () => {
         });
         expect(context.suffixedCookies).toBe(true);
         expect(context.sessionTokenInCookie).toBe(suffixedSession);
-        expect(context.clientUat).toBe(suffixedClientUat);
+        expect(context.clientUat.toString()).toBe(suffixedClientUat);
       });
 
       it('dev: request with invalid issuer un-suffixed and valid multiple suffixed cookies - case of multiple apps on localhost', async () => {
@@ -171,7 +171,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(true);
         expect(context.sessionTokenInCookie).toBe(suffixedSession);
-        expect(context.clientUat).toBe('0');
+        expect(context.clientUat.toString()).toBe('0');
         expect(context.devBrowserToken).toBe('__clerk_db_jwt-suffixed');
       });
 
@@ -193,7 +193,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(true);
         expect(context.sessionTokenInCookie).toBe(suffixedSession);
-        expect(context.clientUat).toBe('0');
+        expect(context.clientUat.toString()).toBe('0');
         expect(context.devBrowserToken).toBe('__clerk_db_jwt-suffixed');
       });
 
@@ -212,7 +212,7 @@ describe('AuthenticateContext', () => {
 
         expect(context.suffixedCookies).toBe(true);
         expect(context.sessionTokenInCookie).toBeUndefined();
-        expect(context.clientUat).toBe('0');
+        expect(context.clientUat.toString()).toBe('0');
       });
     });
   });
