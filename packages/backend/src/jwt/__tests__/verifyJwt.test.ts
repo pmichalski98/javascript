@@ -1,5 +1,4 @@
-import sinon from 'sinon';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   mockJwks,
@@ -48,10 +47,8 @@ describe('decodeJwt(jwt)', () => {
   it('decodes a valid JWT', () => {
     const { data } = decodeJwt(mockJwt);
 
-    // @ts-expect-error
-    expect(data.header).toEqual(mockJwtHeader);
-    // @ts-expect-error
-    expect(data.payload).toEqual(mockJwtPayload);
+    expect(data?.header).toEqual(mockJwtHeader);
+    expect(data?.payload).toEqual(mockJwtPayload);
     // TODO: assert signature is instance of Uint8Array
   });
 
@@ -82,13 +79,12 @@ describe('decodeJwt(jwt)', () => {
 });
 
 describe('verifyJwt(jwt, options)', () => {
-  let fakeClock;
   beforeEach(() => {
-    fakeClock = sinon.useFakeTimers(new Date(mockJwtPayload.iat * 1000).getTime());
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(mockJwtPayload.iat * 1000));
   });
   afterEach(() => {
-    fakeClock.restore();
-    sinon.restore();
+    vi.useRealTimers();
   });
 
   it('returns the valid JWT payload if valid key & issuer & azp is given', async () => {

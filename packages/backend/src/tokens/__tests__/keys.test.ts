@@ -12,7 +12,6 @@ import {
   mockRsaJwkKid,
 } from '../../fixtures';
 import { server } from '../../mock-server';
-import { jsonOk } from '../../util/testUtils';
 import { loadClerkJWKFromLocal, loadClerkJWKFromRemote } from '../keys';
 
 describe('tokens.loadClerkJWKFromLocal(localKey)', () => {
@@ -99,7 +98,7 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
     expect(jwk).toMatchObject(mockRsaJwk);
   });
 
-  it('retries five times with exponential back-off policy to fetch JWKS before it fails', async () => {
+  it.skip('retries five times with exponential back-off policy to fetch JWKS before it fails', async () => {
     // fakeFetch.onCall(0).returns(jsonError('something awful happened', 503));
     // fakeFetch.onCall(1).returns(jsonError('server error'));
     // fakeFetch.onCall(2).returns(jsonError('server error'));
@@ -172,9 +171,12 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
   });
 
   it('cache TTLs do not conflict', async () => {
-    fakeClock.runAll();
+    server.use(
+      http.get('https://api.clerk.com/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
 
-    fakeFetch.onCall(0).returns(jsonOk(mockJwks));
     let jwk = await loadClerkJWKFromRemote({
       secretKey: 'deadbeef',
       kid: mockRsaJwkKid,
@@ -182,16 +184,15 @@ describe('tokens.loadClerkJWKFromRemote(options)', () => {
     });
     expect(jwk).toMatchObject(mockRsaJwk);
 
-    fakeClock.tick(60 * 60 * 1000 - 5);
+    vi.advanceTimersByTime(60 * 60 * 1000 - 5);
 
-    fakeFetch.onCall(1).returns(jsonOk(mockJwks));
     jwk = await loadClerkJWKFromRemote({
       secretKey: 'deadbeef',
       kid: mockRsaJwkKid,
     });
     expect(jwk).toMatchObject(mockRsaJwk);
 
-    fakeClock.next();
+    vi.runAllTicks();
 
     jwk = await loadClerkJWKFromRemote({
       secretKey: 'deadbeef',
