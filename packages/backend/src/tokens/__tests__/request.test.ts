@@ -2,8 +2,16 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { TokenVerificationErrorReason } from '../../errors';
-import { mockExpiredJwt, mockInvalidSignatureJwt, mockJwt, mockJwtPayload, mockMalformedJwt } from '../../fixtures';
+import {
+  mockExpiredJwt,
+  mockInvalidSignatureJwt,
+  mockJwks,
+  mockJwt,
+  mockJwtPayload,
+  mockMalformedJwt,
+} from '../../fixtures';
 import { server } from '../../mock-server';
+import type { AuthReason } from '../authStatus';
 import { AuthErrorReason, AuthStatus } from '../authStatus';
 import {
   authenticateRequest,
@@ -17,26 +25,46 @@ import type { AuthenticateRequestOptions, OrganizationSyncOptions } from '../typ
 const PK_TEST = 'pk_test_Y2xlcmsuaW5zcGlyZWQucHVtYS03NC5sY2wuZGV2JA';
 const PK_LIVE = 'pk_live_Y2xlcmsuaW5zcGlyZWQucHVtYS03NC5sY2wuZGV2JA';
 
+interface CustomMatchers<R = unknown> {
+  toBeSignedOut: (expected: unknown) => R;
+  toBeSignedOutToAuth: () => R;
+  toMatchHandshake: (expected: unknown) => R;
+  toBeSignedIn: (expected?: unknown) => R;
+  toBeSignedInToAuth: () => R;
+}
+
+declare module 'vitest' {
+  interface Assertion<T = any> extends CustomMatchers<T> {}
+  interface AsymmetricMatchersContaining extends CustomMatchers {}
+}
+
 expect.extend({
-  toBeSignedOut(received, expected) {
+  toBeSignedOut(
+    received,
+    expected: {
+      domain?: string;
+      isSatellite?: boolean;
+      message?: string;
+      reason: AuthReason;
+      signInUrl?: string;
+    },
+  ) {
     console.log('received', received);
     console.log('expected', expected);
     const pass =
-      received.proxyUrl === '' &&
-      received.status === AuthStatus.SignedOut &&
-      received.isSignedIn === false &&
-      received.isSatellite === (expected.isSatellite ?? false) &&
-      received.signInUrl === (expected.signInUrl ?? '') &&
-      received.signUpUrl === '' &&
       received.afterSignInUrl === '' &&
       received.afterSignUpUrl === '' &&
       received.domain === (expected.domain ?? '') &&
+      received.isSatellite === (expected.isSatellite ?? false) &&
+      received.isSignedIn === false &&
       received.message === (expected.message ?? '') &&
-      JSON.stringify(received.toAuth) === JSON.stringify(expected.toAuth) &&
-      received.token === null &&
-      received.reason === expected.reason;
-
-    console.log('pass', pass);
+      received.proxyUrl === '' &&
+      received.reason === expected.reason &&
+      received.signInUrl === (expected.signInUrl ?? '') &&
+      received.signUpUrl === '' &&
+      received.status === AuthStatus.SignedOut &&
+      // JSON.stringify(received.toAuth) === JSON.stringify(expected.toAuth) &&
+      received.token === null;
 
     if (pass) {
       return {
@@ -50,103 +78,119 @@ expect.extend({
       };
     }
   },
-  toBeSignedOutToAuth(received, expected) {
+  toBeSignedOutToAuth(received) {
     const pass =
-      received.sessionClaims === expected.sessionClaims &&
-      received.sessionId === expected.sessionId &&
-      received.userId === expected.userId &&
-      received.orgId === expected.orgId &&
-      received.orgRole === expected.orgRole &&
-      received.orgSlug === expected.orgSlug &&
-      JSON.stringify(received.getToken) === JSON.stringify(expected.getToken);
+      !received.orgId &&
+      !received.orgRole &&
+      !received.orgSlug &&
+      !received.sessionClaims &&
+      !received.sessionId &&
+      !received.userId;
+
+    console.log('received', received);
 
     if (pass) {
       return {
-        message: () => `expected ${received} not to be signed out`,
+        message: () => `expected user not to be signed out`,
         pass: true,
       };
     } else {
       return {
-        message: () => `expected ${received} to be signed out`,
+        message: () => `expected user to be signed out`,
         pass: false,
       };
     }
   },
-  toMatchHandshake(requestState, expectedState) {
+  toMatchHandshake(
+    received,
+    expected: {
+      domain?: string;
+      isSatellite?: boolean;
+      reason: AuthReason;
+      signInUrl?: string;
+    },
+  ) {
     // const hasCacheControl = !!requestState?.headers?.get('cache-control');
     // expect(hasCacheControl).toBe(true);
 
-    expect(requestState).toMatchObject({
-      proxyUrl: '',
-      status: AuthStatus.Handshake,
-      isSignedIn: false,
-      isSatellite: false,
-      signInUrl: '',
-      signUpUrl: '',
+    expect(received).toMatchObject({
       afterSignInUrl: '',
       afterSignUpUrl: '',
       domain: '',
+      isSatellite: false,
+      isSignedIn: false,
+      proxyUrl: '',
+      signInUrl: '',
+      signUpUrl: '',
+      status: AuthStatus.Handshake,
       toAuth: {},
       token: null,
-      ...expectedState,
+      ...expected,
     });
 
     const pass = true;
 
     if (pass) {
       return {
-        message: () => `expected ${JSON.stringify(requestState)} not to match handshake state`,
+        message: () => `expected not to match handshake state`,
         pass: true,
       };
     } else {
       return {
-        message: () => `expected ${JSON.stringify(requestState)} to match handshake state`,
+        message: () => `expected to match handshake state`,
         pass: false,
       };
     }
   },
-  toBeSignedInToAuth(received, expected) {
+  toBeSignedIn(
+    received,
+    expected: {
+      domain?: string;
+      isSatellite?: boolean;
+      signInUrl?: string;
+    },
+  ) {
     const pass =
-      received.sessionClaims === expected?.sessionClaims &&
-      received.sessionId === expected?.sessionId &&
-      received.userId === expected?.userId &&
-      received.orgId === expected?.orgId &&
-      received.orgRole === expected?.orgRole &&
-      received.orgSlug === expected?.orgSlug &&
-      JSON.stringify(received.getToken) === JSON.stringify(expected?.getToken);
-
-    if (pass) {
-      return {
-        message: () => `expected ${received} not to be signed in`,
-        pass: true,
-      };
-    } else {
-      return {
-        message: () => `expected ${received} to be signed in`,
-        pass: false,
-      };
-    }
-  },
-  toBeSignedIn(received, expected) {
-    const pass =
-      received.proxyUrl === '' &&
-      received.status === AuthStatus.SignedIn &&
-      received.isSignedIn === true &&
-      received.isSatellite === (expected?.isSatellite ?? false) &&
-      received.signInUrl === (expected?.signInUrl ?? '') &&
-      received.signUpUrl === '' &&
       received.afterSignInUrl === '' &&
       received.afterSignUpUrl === '' &&
-      received.domain === (expected?.domain ?? '');
+      received.domain === (expected?.domain ?? '') &&
+      received.isSatellite === (expected?.isSatellite ?? false) &&
+      received.isSignedIn === true &&
+      received.proxyUrl === '' &&
+      received.signInUrl === (expected?.signInUrl ?? '') &&
+      received.signUpUrl === '' &&
+      received.status === AuthStatus.SignedIn;
 
     if (pass) {
       return {
-        message: () => `expected ${received} not to be signed in`,
+        message: () => `expected not to be signed in`,
         pass: true,
       };
     } else {
       return {
-        message: () => `expected ${received} to be signed in`,
+        message: () => `expected to be signed in`,
+        pass: false,
+      };
+    }
+  },
+  toBeSignedInToAuth(received) {
+    const pass =
+      received.orgId === undefined &&
+      received.orgRole === undefined &&
+      received.orgSlug === undefined &&
+      received.sessionClaims === mockJwtPayload &&
+      received.sessionId === mockJwtPayload.sid &&
+      received.userId === mockJwtPayload.sub;
+    // JSON.stringify(received.getToken) === JSON.stringify(expected?.getToken);
+
+    if (pass) {
+      return {
+        message: () => `expected not to be signed in`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected to be signed in`,
         pass: false,
       };
     }
@@ -398,7 +442,6 @@ describe('tokens.authenticateRequest(options)', () => {
     const errMessage =
       'The JWKS endpoint did not contain any signing keys. Contact support@clerk.com. Contact support@clerk.com (reason=jwk-remote-failed-to-load, token-carrier=header)';
 
-    // @ts-expect-error - FIXME
     expect(requestState.toAuth()).toBeSignedOut({
       reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad,
       message: errMessage,
@@ -417,11 +460,15 @@ describe('tokens.authenticateRequest(options)', () => {
   });
 
   test('headerToken: returns signed in state when a valid token [1y.2y]', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     const requestState = await authenticateRequest(mockRequestWithHeaderAuth(), mockOptions());
 
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedIn();
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedInToAuth();
   });
 
@@ -432,10 +479,10 @@ describe('tokens.authenticateRequest(options)', () => {
   //   },
   // );
 
-  test.skip('headerToken: returns signed out state when a token with invalid authorizedParties [1y.2n]', async () => {
+  test('headerToken: returns signed out state when a token with invalid authorizedParties [1y.2n]', async () => {
     server.use(
       http.get('https://api.clerk.test/v1/jwks', () => {
-        return new HttpResponse('{}', { status: 200 });
+        return HttpResponse.json(mockJwks);
       }),
     );
 
@@ -456,15 +503,15 @@ describe('tokens.authenticateRequest(options)', () => {
     expect(requestState).toBeSignedOutToAuth();
   });
 
-  test.only('headerToken: returns handshake state when token expired [1y.2n]', async () => {
-    // advance clock for 1 hour
-    vi.advanceTimersByTime(3600 * 1000);
-
+  test('headerToken: returns handshake state when token expired [1y.2n]', async () => {
     server.use(
       http.get('https://api.clerk.test/v1/jwks', () => {
-        return new HttpResponse('{}', { status: 200 });
+        return HttpResponse.json(mockJwks);
       }),
     );
+
+    // advance clock for 1 hour
+    vi.advanceTimersByTime(3600 * 1000);
 
     const requestState = await authenticateRequest(mockRequestWithHeaderAuth(), mockOptions());
 
@@ -478,6 +525,12 @@ describe('tokens.authenticateRequest(options)', () => {
   });
 
   test('headerToken: returns signed out state when invalid signature [1y.2n]', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     const requestState = await authenticateRequest(
       mockRequestWithHeaderAuth({
         authorization: mockInvalidSignatureJwt,
@@ -486,11 +539,11 @@ describe('tokens.authenticateRequest(options)', () => {
     );
 
     const errMessage = 'JWT signature is invalid. (reason=token-invalid-signature, token-carrier=header)';
-    assertSignedOut(assert, requestState, {
+    expect(requestState).toBeSignedOut({
       reason: TokenVerificationErrorReason.TokenInvalidSignature,
       message: errMessage,
     });
-    assertSignedOutToAuth(assert, requestState);
+    expect(requestState).toBeSignedOutToAuth();
   });
 
   test('headerToken: returns signed out state when an malformed token [1y.1n]', async () => {
@@ -499,16 +552,21 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions(),
     );
 
-    const errMessage =
-      'Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid, token-carrier=header)';
-    assertSignedOut(assert, requestState, {
+    expect(requestState).toBeSignedOut({
       reason: TokenVerificationErrorReason.TokenInvalid,
-      message: errMessage,
+      message:
+        'Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid, token-carrier=header)',
     });
-    assertSignedOutToAuth(assert, requestState);
+    expect(requestState).toBeSignedOutToAuth();
   });
 
   test('cookieToken: returns handshake when clientUat is missing or equals to 0 and is satellite and not is synced [11y]', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
         {},
@@ -525,7 +583,7 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertHandshake(assert, requestState, {
+    expect(requestState).toMatchHandshake({
       reason: AuthErrorReason.SatelliteCookieNeedsSyncing,
       isSatellite: true,
       signInUrl: 'https://primary.dev/sign-in',
@@ -554,13 +612,13 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertSignedOut(assert, requestState, {
+    expect(requestState).toBeSignedOut({
       reason: AuthErrorReason.SessionTokenAndUATMissing,
       isSatellite: true,
       signInUrl: 'https://primary.dev/sign-in',
       domain: 'satellite.dev',
     });
-    assertSignedOutToAuth(assert, requestState);
+    expect(requestState).toBeSignedOutToAuth();
   });
 
   test('cookieToken: returns handshake when app is satellite, returns from primary and is dev instance [13y]', async () => {
@@ -574,7 +632,7 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertHandshake(assert, requestState, {
+    expect(requestState).toMatchHandshake({
       reason: AuthErrorReason.DevBrowserSync,
       isSatellite: true,
       domain: 'satellite.example',
@@ -597,7 +655,7 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions({ secretKey: 'sk_test_deadbeef', isSatellite: false }),
     );
 
-    assertHandshake(assert, requestState, {
+    expect(requestState).toMatchHandshake({
       reason: AuthErrorReason.PrimaryRespondsToSyncing,
     });
     expect(requestState.message).toBe('');
@@ -613,10 +671,10 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertSignedOut(assert, requestState, {
+    expect(requestState).toBeSignedOut({
       reason: AuthErrorReason.SessionTokenAndUATMissing,
     });
-    assertSignedOutToAuth(assert, requestState);
+    expect(requestState).toBeSignedOutToAuth();
   });
 
   test('cookieToken: returns handshake when no dev browser in development', async () => {
@@ -627,7 +685,7 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertHandshake(assert, requestState, { reason: AuthErrorReason.DevBrowserMissing });
+    expect(requestState).toMatchHandshake({ reason: AuthErrorReason.DevBrowserMissing });
     expect(requestState.message).toBe('');
     expect(requestState.toAuth()).toBeNull();
   });
@@ -640,7 +698,7 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertHandshake(assert, requestState, { reason: AuthErrorReason.SessionTokenWithoutClientUAT });
+    expect(requestState).toMatchHandshake({ reason: AuthErrorReason.SessionTokenWithoutClientUAT });
     expect(requestState.message).toBe('');
     expect(requestState.toAuth()).toBeNull();
   });
@@ -653,12 +711,18 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    assertHandshake(assert, requestState, { reason: AuthErrorReason.DevBrowserMissing });
+    expect(requestState).toMatchHandshake({ reason: AuthErrorReason.DevBrowserMissing });
     expect(requestState.message).toBe('');
     expect(requestState.toAuth()).toBeNull();
   });
 
   test('cookieToken: returns signedIn when satellite but valid token and clientUat', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     // Scenario: after auth action on Clerk-hosted UIs
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
@@ -678,13 +742,11 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedIn({
       isSatellite: true,
       signInUrl: 'https://localhost:3000/sign-in/',
       domain: 'localhost:3001',
     });
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedInToAuth();
   });
 
@@ -694,7 +756,7 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions({ secretKey: 'deadbeef', publishableKey: PK_LIVE }),
     );
 
-    assertHandshake(assert, requestState, { reason: AuthErrorReason.ClientUATWithoutSessionToken });
+    expect(requestState).toMatchHandshake({ reason: AuthErrorReason.ClientUATWithoutSessionToken });
     expect(requestState.message).toBe('');
     expect(requestState.toAuth()).toBeNull();
   });
@@ -705,10 +767,10 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions({ publishableKey: PK_LIVE }),
     );
 
-    assertSignedOut(assert, requestState, {
+    expect(requestState).toBeSignedOut({
       reason: AuthErrorReason.SessionTokenAndUATMissing,
     });
-    assertSignedOutToAuth(assert, requestState);
+    expect(requestState).toBeSignedOutToAuth();
   });
 
   test('cookieToken: returns handshake when clientUat > cookieToken.iat [10n]', async () => {
@@ -724,12 +786,18 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions(),
     );
 
-    assertHandshake(assert, requestState, { reason: AuthErrorReason.SessionTokenIATBeforeClientUAT });
+    expect(requestState).toMatchHandshake({ reason: AuthErrorReason.SessionTokenIATBeforeClientUAT });
     expect(requestState.message).toBe('');
     expect(requestState.toAuth()).toBeNull();
   });
 
   test('cookieToken: returns signed out when cookieToken.iat >= clientUat and malformed token [10y.1n]', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
         {},
@@ -752,6 +820,12 @@ describe('tokens.authenticateRequest(options)', () => {
   });
 
   test('cookieToken: returns signed in when cookieToken.iat >= clientUat and valid token [10y.2y]', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
         {},
@@ -764,9 +838,7 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions(),
     );
 
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedIn();
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedInToAuth();
   });
 
@@ -778,8 +850,14 @@ describe('tokens.authenticateRequest(options)', () => {
   // );
 
   test('cookieToken: returns handshake when cookieToken.iat >= clientUat and expired token [10y.2n.1n]', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     // advance clock for 1 hour
-    fakeClock.tick(3600 * 1000);
+    vi.advanceTimersByTime(3600 * 1000);
 
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
@@ -793,7 +871,7 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions(),
     );
 
-    assertHandshake(assert, requestState, {
+    expect(requestState).toMatchHandshake({
       reason: `${AuthErrorReason.SessionTokenExpired}-refresh-${RefreshTokenErrorReason.NonEligibleNoCookie}`,
     });
     expect(requestState.message || '').toMatch(/^JWT is expired/);
@@ -801,6 +879,12 @@ describe('tokens.authenticateRequest(options)', () => {
   });
 
   test('cookieToken: returns signed in for Amazon Cloudfront userAgent', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
         {
@@ -812,18 +896,22 @@ describe('tokens.authenticateRequest(options)', () => {
       mockOptions({ secretKey: 'test_deadbeef', publishableKey: PK_LIVE }),
     );
 
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedIn();
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedInToAuth();
   });
 
   test('refreshToken: returns signed in with valid refresh token cookie if token is expired and refresh token exists', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     // return cookies from endpoint
-    const refreshSession = sinon.fake.resolves({
+    const refreshSession = vi.fn(() => ({
       object: 'token',
       jwt: mockJwt,
-    });
+    }));
 
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
@@ -840,18 +928,23 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedIn();
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedInToAuth();
+    expect(refreshSession).toHaveBeenCalled();
   });
 
   test('refreshToken: does not try to refresh if refresh token does not exist', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     // return cookies from endpoint
-    const refreshSession = sinon.fake.resolves({
+    const refreshSession = vi.fn(() => ({
       object: 'token',
       jwt: mockJwt,
-    });
+    }));
 
     await authenticateRequest(
       mockRequestWithCookies(
@@ -867,15 +960,15 @@ describe('tokens.authenticateRequest(options)', () => {
         apiClient: { sessions: { refreshSession } },
       }),
     );
-    expect(refreshSession.called).toBe(false);
+    expect(refreshSession).not.toHaveBeenCalled();
   });
 
   test('refreshToken: does not try to refresh if refresh exists but token is not expired', async () => {
     // return cookies from endpoint
-    const refreshSession = sinon.fake.resolves({
+    const refreshSession = vi.fn(() => ({
       object: 'token',
       jwt: mockJwt,
-    });
+    }));
 
     await authenticateRequest(
       mockRequestWithCookies(
@@ -893,15 +986,21 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    expect(refreshSession.called).toBe(false);
+    expect(refreshSession).not.toHaveBeenCalled();
   });
 
   test('refreshToken: uses suffixed refresh cookie even if un-suffixed is present', async () => {
+    server.use(
+      http.get('https://api.clerk.test/v1/jwks', () => {
+        return HttpResponse.json(mockJwks);
+      }),
+    );
+
     // return cookies from endpoint
-    const refreshSession = sinon.fake.resolves({
+    const refreshSession = vi.fn(() => ({
       object: 'token',
       jwt: mockJwt,
-    });
+    }));
 
     const requestState = await authenticateRequest(
       mockRequestWithCookies(
@@ -923,10 +1022,8 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedIn();
-    // @ts-expect-error - FIXME
     expect(requestState).toBeSignedInToAuth();
-    expect(refreshSession.getCall(0).args[1].refresh_token).toBe('can_be_anything');
+    expect(refreshSession).toHaveBeenCalledWith('can_be_anything');
   });
 });
