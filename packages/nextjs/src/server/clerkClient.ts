@@ -75,12 +75,10 @@ interface ClerkClientExport extends ClerkClient {
 }
 
 // TODO SDK-1839 - Remove `clerkClient` singleton in the next major version of `@clerk/nextjs`
-const clerkClient = new Proxy(Object.assign(clerkClientForRequest, clerkClientSingleton), {
+export const clerkClient = new Proxy(Object.assign(clerkClientForRequest, clerkClientSingleton), {
   get(target, prop: string, receiver) {
     deprecated('clerkClient singleton', 'Use `clerkClient()` as a function instead.');
 
     return Reflect.get(target, prop, receiver);
   },
 }) as ClerkClientExport;
-
-export { clerkClient };
