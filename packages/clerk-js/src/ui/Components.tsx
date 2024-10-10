@@ -2,6 +2,7 @@ import { createDeferredPromise } from '@clerk/shared';
 import { useSafeLayoutEffect } from '@clerk/shared/react';
 import type {
   __experimental_UserVerificationProps,
+  __experimental_WaitlistProps,
   Appearance,
   Clerk,
   ClerkOptions,
@@ -12,7 +13,6 @@ import type {
   SignInProps,
   SignUpProps,
   UserProfileProps,
-  WaitlistProps,
 } from '@clerk/types';
 import React, { Suspense } from 'react';
 
@@ -77,7 +77,7 @@ export type ComponentControls = {
         : T extends 'userVerification'
           ? __experimental_UserVerificationProps
           : T extends 'waitlist'
-            ? WaitlistProps
+            ? __experimental_WaitlistProps
             : UserProfileProps,
   ) => void;
   closeModal: (
@@ -122,7 +122,7 @@ interface ComponentsState {
   userVerificationModal: null | __experimental_UserVerificationProps;
   organizationProfileModal: null | OrganizationProfileProps;
   createOrganizationModal: null | CreateOrganizationProps;
-  waitlistModal: null | WaitlistProps;
+  waitlistModal: null | __experimental_WaitlistProps;
   nodes: Map<HTMLDivElement, HtmlNodeOptions>;
   impersonationFab: boolean;
 }
