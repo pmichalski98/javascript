@@ -49,8 +49,6 @@ expect.extend({
       signInUrl?: string;
     },
   ) {
-    console.log('received', received);
-    console.log('expected', expected);
     const pass =
       received.afterSignInUrl === '' &&
       received.afterSignUpUrl === '' &&
@@ -86,8 +84,6 @@ expect.extend({
       !received.sessionClaims &&
       !received.sessionId &&
       !received.userId;
-
-    console.log('received', received);
 
     if (pass) {
       return {
@@ -183,14 +179,23 @@ expect.extend({
       received.userId === mockJwtPayload.sub;
     // JSON.stringify(received.getToken) === JSON.stringify(expected?.getToken);
 
+    // TODO: verify this matcher works as expected
+    // console.log(received);
+    // console.log('orgId', received.orgId);
+    // console.log('orgRole', received.orgRole);
+    // console.log('orgSlug', received.orgSlug);
+    // console.log('sessionClaims', received.sessionClaims);
+    // console.log('sessionId', received.sessionId);
+    // console.log('userId', received.userId);
+
     if (pass) {
       return {
-        message: () => `expected not to be signed in`,
+        message: () => `expected not to be signed in to auth`,
         pass: true,
       };
     } else {
       return {
-        message: () => `expected to be signed in`,
+        message: () => `expected to be signed in to auth`,
         pass: false,
       };
     }
@@ -419,7 +424,7 @@ describe('tokens.getOrganizationSyncTarget(url,options)', _ => {
 describe('tokens.authenticateRequest(options)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(mockJwtPayload.iat * 1000).getTime());
+    vi.setSystemTime(new Date(mockJwtPayload.iat * 1000));
   });
 
   afterEach(() => {
@@ -433,7 +438,7 @@ describe('tokens.authenticateRequest(options)', () => {
   test('returns signed out state if jwk fails to load from remote', async () => {
     server.use(
       http.get('https://api.clerk.test/v1/jwks', () => {
-        return new HttpResponse('{}', { status: 200 });
+        return HttpResponse.json({}, { status: 200 });
       }),
     );
 
@@ -442,7 +447,7 @@ describe('tokens.authenticateRequest(options)', () => {
     const errMessage =
       'The JWKS endpoint did not contain any signing keys. Contact support@clerk.com. Contact support@clerk.com (reason=jwk-remote-failed-to-load, token-carrier=header)';
 
-    expect(requestState.toAuth()).toBeSignedOut({
+    expect(requestState).toBeSignedOut({
       reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad,
       message: errMessage,
     });
@@ -493,8 +498,6 @@ describe('tokens.authenticateRequest(options)', () => {
       }),
     );
 
-    console.log(requestState);
-
     expect(requestState).toBeSignedOut({
       reason: TokenVerificationErrorReason.TokenInvalidAuthorizedParties,
       message:
@@ -514,8 +517,6 @@ describe('tokens.authenticateRequest(options)', () => {
     vi.advanceTimersByTime(3600 * 1000);
 
     const requestState = await authenticateRequest(mockRequestWithHeaderAuth(), mockOptions());
-
-    console.log(requestState);
 
     expect(requestState).toMatchHandshake({
       reason: `${AuthErrorReason.SessionTokenExpired}-refresh-${RefreshTokenErrorReason.NonEligibleNoCookie}`,
