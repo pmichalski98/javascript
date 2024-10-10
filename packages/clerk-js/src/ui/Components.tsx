@@ -12,6 +12,7 @@ import type {
   SignInProps,
   SignUpProps,
   UserProfileProps,
+  WaitlistProps,
 } from '@clerk/types';
 import React, { Suspense } from 'react';
 
@@ -30,6 +31,7 @@ import {
   SignUpModal,
   UserProfileModal,
   UserVerificationModal,
+  WaitlistModal,
 } from './lazyModules/components';
 import {
   LazyComponentRenderer,
@@ -64,7 +66,8 @@ export type ComponentControls = {
       | 'userProfile'
       | 'organizationProfile'
       | 'createOrganization'
-      | 'userVerification',
+      | 'userVerification'
+      | 'waitlist',
   >(
     modal: T,
     props: T extends 'signIn'
@@ -73,7 +76,9 @@ export type ComponentControls = {
         ? SignUpProps
         : T extends 'userVerification'
           ? __experimental_UserVerificationProps
-          : UserProfileProps,
+          : T extends 'waitlist'
+            ? WaitlistProps
+            : UserProfileProps,
   ) => void;
   closeModal: (
     modal:
@@ -83,7 +88,8 @@ export type ComponentControls = {
       | 'userProfile'
       | 'organizationProfile'
       | 'createOrganization'
-      | 'userVerification',
+      | 'userVerification'
+      | 'waitlist',
     options?: {
       notify?: boolean;
     },
@@ -116,6 +122,7 @@ interface ComponentsState {
   userVerificationModal: null | __experimental_UserVerificationProps;
   organizationProfileModal: null | OrganizationProfileProps;
   createOrganizationModal: null | CreateOrganizationProps;
+  waitlistModal: null | WaitlistProps;
   nodes: Map<HTMLDivElement, HtmlNodeOptions>;
   impersonationFab: boolean;
 }
@@ -180,6 +187,7 @@ const componentNodes = Object.freeze({
   UserProfile: 'userProfileModal',
   OrganizationProfile: 'organizationProfileModal',
   CreateOrganization: 'createOrganizationModal',
+  Waitlist: 'waitlist',
 }) as any;
 
 const Components = (props: ComponentsProps) => {
@@ -193,6 +201,7 @@ const Components = (props: ComponentsProps) => {
     userVerificationModal: null,
     organizationProfileModal: null,
     createOrganizationModal: null,
+    waitlistModal: null,
     nodes: new Map(),
     impersonationFab: false,
   });
@@ -205,6 +214,7 @@ const Components = (props: ComponentsProps) => {
     userVerificationModal,
     organizationProfileModal,
     createOrganizationModal,
+    waitlistModal,
     nodes,
   } = state;
 
@@ -419,6 +429,22 @@ const Components = (props: ComponentsProps) => {
     </LazyModalRenderer>
   );
 
+  const mountedWaitlistModal = (
+    <LazyModalRenderer
+      globalAppearance={state.appearance}
+      appearanceKey={'waitlist'}
+      componentAppearance={waitlistModal?.appearance}
+      flowName={'waitlist'}
+      onClose={() => componentsControls.closeModal('waitlist')}
+      onExternalNavigate={() => componentsControls.closeModal('waitlist')}
+      startPath={buildVirtualRouterUrl({ base: '/waitlist', path: urlStateParam?.path })}
+      componentName={'WaitlistModal'}
+    >
+      <WaitlistModal {...waitlistModal} />
+      <SignInModal {...waitlistModal} />
+    </LazyModalRenderer>
+  );
+
   return (
     <Suspense fallback={''}>
       <LazyProviders
@@ -447,6 +473,7 @@ const Components = (props: ComponentsProps) => {
         {userVerificationModal && mountedUserVerificationModal}
         {organizationProfileModal && mountedOrganizationProfileModal}
         {createOrganizationModal && mountedCreateOrganizationModal}
+        {waitlistModal && mountedWaitlistModal}
         {state.impersonationFab && (
           <LazyImpersonationFabProvider globalAppearance={state.appearance}>
             <ImpersonationFab />

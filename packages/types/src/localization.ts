@@ -787,6 +787,19 @@ type _LocalizationResource = {
     next6Days: LocalizationValue;
     numeric: LocalizationValue;
   };
+  waitlist: {
+    start: {
+      title: LocalizationValue;
+      subtitle: LocalizationValue;
+      formButton: LocalizationValue;
+      actionText: LocalizationValue;
+      actionLink: LocalizationValue;
+    };
+    success: {
+      title: LocalizationValue;
+      subtitle: LocalizationValue;
+    };
+  };
 };
 
 type WithParamName<T> = T &
